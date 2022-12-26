@@ -1,10 +1,7 @@
 
 ####
 # Autor: Pedro Nascimento de Lima, 2017
-# Código fonte desenvolvido para a Dissertação de Mestrado.
-# Arquivo: amalise.R
-# Objetivo: Este arquivo contém a execução da análise.
-# RDM realizadas durante a dissertação.
+# Source code MS dissertation and paper on Open Source R&D Strategies.
 ####
 
 ####Configurando Simulações ####
@@ -83,13 +80,11 @@ BROWSE_ON_DIFF = TRUE; VERIFICAR_GLOBAL = FALSE;
 # Source functions again:
 invisible(sapply(X = paste0(list.files(path = "./R/functions/", pattern = "*.R",full.names = T)),FUN = source, echo = F)) 
 
-
-
 # Simular
 results = simularRDM_e_escolher_estrategia(inputs = planilha_inputs,
                                                  sdmodel = sdmodel, 
                                                  opcoes = opcoes)
 
-save(results, file = paste0("./outputs/results_final.rda"))
+dir.create("./outputs/", showWarnings=FALSE)
 
-load(paste0(results_path,"results_final.rda"))
+save(results, file = paste0("./outputs/results_final.rda"))
