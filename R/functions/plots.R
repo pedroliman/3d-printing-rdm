@@ -1,5 +1,38 @@
 
 
+
+# Plot template
+
+
+library(showtext)
+library(ggplot2)
+library(ggfan)
+
+g_font <- "Noto Sans" 
+mono_font <- "Roboto Mono"
+
+font_add_google(name = g_font,family = g_font)
+font_add_google(name = mono_font,family = mono_font)
+
+# Plot Theme from The RAND Corporation
+# This theme is based on a theme available from randplot
+# This is intended to be used by RANDites.
+# If you are not affiliated in any way with RAND, I recommend you should use another theme.
+
+base_theme <- randplot::theme_rand(font = g_font) + theme(
+  # Use mono font when aligning axis.text
+  #axis.text = element_text(family = mono_font),
+  legend.position="top",
+  axis.text.x = element_text(size = 8),
+  legend.spacing.x = unit(0, 'cm'),
+  panel.spacing.y=unit(0.5, "lines"),
+  panel.grid.minor=element_blank(),
+  panel.grid.major=element_blank()
+  )
+
+showtext_auto()
+
+
 ##### GRÁFICOS ####
 gerar_grafico_superficie = function(dados_ultimo_ano,variaveis, estrategia) {
   dadosplot = subset.data.frame(dados_ultimo_ano, (Lever == estrategia))
@@ -44,7 +77,8 @@ plot_clientes_uma_estrategia = function(dados, estrategia) {
     geom_line() + 
     ylab("Adopters") + 
     xlab("Time") +
-    labs(color = "Strategy")
+    labs(color = "Strategy") + 
+    base_theme
 }
 
 plot_cash_uma_estrategia = function(dados, estrategia) {
@@ -54,7 +88,8 @@ plot_cash_uma_estrategia = function(dados, estrategia) {
     geom_line() + 
     ylab("Net Present Value") + 
     xlab("Time") +
-    labs(color = "Strategy")
+    labs(color = "Strategy") + 
+    base_theme
 }
 
 plot_linha_uma_variavel_ensemble_uma_estrategia = function(dados, variavel, nome_amigavel_variavel, estrategia) {
@@ -75,8 +110,32 @@ plot_linha_uma_variavel_ensemble_uma_estrategia = function(dados, variavel, nome
     xlab("Time") + 
     theme(legend.position="bottom")  +
     labs(color = "Strategy") +
-    scale_y_continuous(labels = format_for_humans)
+    scale_y_continuous(labels = format_for_humans) + 
+    base_theme
 }
+
+plot_linha_uma_variavel_ensemble_uma_estrategia = function(dados, variavel, nome_amigavel_variavel, estrategia) {
+  
+  gr2_dados = subset(dados, (Lever %in% estrategia))
+  
+  call_grafico = substitute(
+    expr = ggplot2::ggplot(gr2_dados, aes(x= time, y= Variavel, color=factor(Lever) , group= interaction(Lever, Scenario) 
+    )),
+    env = list(Variavel = as.name(variavel))
+  )
+  
+  p <- eval(call_grafico)
+  
+  p + 
+    geom_line() + 
+    ylab(nome_amigavel_variavel) + 
+    xlab("Time") + 
+    theme(legend.position="bottom")  +
+    labs(color = "Strategy") +
+    scale_y_continuous(labels = format_for_humans) + 
+    base_theme
+}
+
 
 plot_linha_uma_variavel_players_um_cenario = function(dados = results$DadosSimulados, estrategia = 1, cenario = 4, variavel = "sNPVProfit", nome_amigavel_variavel = "VPL", opcoes = opcoes){
   variaveis_players = paste(variavel, 1:N_PLAYERS, sep="")
@@ -97,7 +156,8 @@ plot_linha_uma_variavel_players_um_cenario = function(dados = results$DadosSimul
     xlab("Time") + 
     theme(legend.position="bottom")  +
     labs(color = "Player") +
-    scale_y_continuous(labels = format_for_humans)
+    scale_y_continuous(labels = format_for_humans) + 
+    base_theme
 }
 
 
@@ -125,7 +185,45 @@ plot_linha_uma_variavel_ensemble = function(dados, variavel, nome_amigavel_varia
     xlab("Time") + 
     theme(legend.position="bottom")  +
     labs(color = "Case") +
-    scale_y_continuous(labels = format_for_humans)
+    scale_y_continuous(labels = format_for_humans) + 
+    base_theme
+}
+
+
+
+plot_fan = function(dados, variavel, nome_amigavel_variavel, estrategia) {
+  
+  levers_no_ensemble = unique(dados$Lever)
+  
+  dados$time = dados$time - min(dados$time)
+  
+  # Caso exista mais de uma estratégia, usar somente a primeira.
+  if(length(levers_no_ensemble) > 1) {
+   dados = subset(dados, Lever == estrategia)
+  }
+  
+  call_grafico = substitute(
+    expr = ggplot2::ggplot(dados, aes(x= time, y= Variavel)),
+    env = list(Variavel = as.name(variavel))
+  )
+  
+  p <- eval(call_grafico)
+  
+  # Intervals:
+  # 
+  p + 
+    geom_fan(intervals = seq.default(from = 0, to = 1, by = 0.02)) + 
+    stat_sample(aes(group=Scenario), n_samples=5, size=0.3, alpha=0.9,color = "black") +
+    ylab(nome_amigavel_variavel) + 
+    base_theme + 
+    xlab("Year") + 
+    labs(color = "Case") +
+    #scale_x_continuous(limits = c(2018, 2028), breaks = seq.default(from = 2018, to = 2028, by = 2)) +
+    scale_y_continuous(labels = format_for_humans) + 
+    theme(legend.title = element_text()) + 
+    theme(legend.position="bottom", legend.box.just = "right")  +
+    labs(fill = "Quantiles \n") + 
+    scale_fill_gradient(low="#af61a7", high="white")
 }
 
 
@@ -144,7 +242,8 @@ plot_linha_uma_variavel = function(dados, variavel, nome_amigavel_variavel) {
     ylab(nome_amigavel_variavel) + 
     xlab("Time") + 
     theme(legend.position="bottom") +
-    scale_y_continuous(labels = format_for_humans)
+    scale_y_continuous(labels = format_for_humans) + 
+    base_theme
 }
 
 
@@ -165,7 +264,8 @@ plot_partial_plot = function(dados, variavel, nome_amigavel_variavel) {
     scale_y_continuous(labels = format_for_humans) +
     scale_x_continuous(labels = format_for_humans) + 
     theme(axis.text=element_text(size=8),
-          axis.title=element_text(size=8))
+          axis.title=element_text(size=8)) + 
+    base_theme
   #theme(axis.text.x = element_text(size=20)) # + ggtitle(paste0("Part. Dep.: ",v))
 }
 
@@ -182,7 +282,8 @@ plot_partial_plot_n_variaveis = function(dados) {
     scale_y_continuous(labels = format_for_humans) +
     scale_x_continuous(labels = format_for_humans) + 
     theme(axis.text=element_text(size=8),
-          axis.title=element_text(size=8)) 
+          axis.title=element_text(size=8)) + 
+    base_theme
   
   p = p + facet_wrap(~Variavel, scales = "free_x", ncol = 3, strip.position = "bottom")
   p 
@@ -222,7 +323,8 @@ plot_linha_duas_variaveis = function(dados, variavel1, nome_amigavel_variavel1, 
                 x = "Time",
                 colour = "Variable")
   
-  p <- p + theme(legend.position="bottom")
+  p <- p + theme(legend.position="bottom") + 
+    base_theme
   
   p
   
@@ -237,7 +339,8 @@ plot_taxa_adocao_uma_estrategia = function(dados, estrategia) {
     geom_line() + 
     ylab("Adoption Rate") + 
     xlab("Time") +
-    labs(color = "Strategy")
+    labs(color = "Strategy") + 
+    base_theme
 }
 
 
@@ -267,7 +370,8 @@ grafico_whisker_por_lever = function(dados_regret, variavel, nome_amigavel_varia
   p + geom_boxplot() + 
     scale_y_continuous(labels = format_for_humans) + 
     ylab(nome_amigavel_variavel) + 
-    theme(axis.text.x = element_text(size=7))
+    theme(axis.text.x = element_text(size=7)) + 
+    base_theme
 }
 
 #' plot_fronteira_tradeoff_estrategia
@@ -393,7 +497,8 @@ plot_fronteira_tradeoff_estrategia = function(results, opcoes = opcoes) {
     xlab("Odds of Vulnerable Scenario") +
     labs(color = "Strategy") +
     scale_x_continuous(breaks = OddsCenarioBreaks, labels = OddsTextoBreaks, trans = "log10") + 
-    scale_y_continuous(labels = format_for_humans)
+    scale_y_continuous(labels = format_for_humans) + 
+    base_theme
   
   list(
     DadosTradeoffPontos = dados_join,
@@ -470,7 +575,8 @@ plot_tradeoff_regret_vpl = function(results, opcoes = opcoes) {
     scale_y_continuous(labels = format_for_humans) + 
     scale_x_continuous(labels = format_for_humans) +
     ylab("Net Present Value (75% Percentile)") +
-    xlab("Regret (75% Percentile)")
+    xlab("Regret (75% Percentile)") + 
+    base_theme
   
   
 }
@@ -493,7 +599,8 @@ plot_estrategias_versus_incertezas = function(df_vulnerabilidade, incertezas, bi
     GGally::ggpairs(df_vulnerabilidade, columns = incertezas, aes(colour = sNPVProfit1Regret, alpha = 0.7))
   }
   
-  p
+  p + 
+    base_theme
 }
 
 
@@ -526,7 +633,8 @@ plot_landscape_futuros_plausiveis = function(results, estrategia, variavelresp, 
     ggtitle(label = paste("Estratégia", estrategia)) + 
     theme(plot.title = element_text(hjust = 0.5)) +
     theme(legend.position = "bottom") + 
-    viridis::scale_fill_viridis()
+    viridis::scale_fill_viridis() + 
+    base_theme
   
   #scale_color_gradient()
   
@@ -557,7 +665,8 @@ plot_grid_estrategias_casos_vpl = function(results) {
       #legend.background = element_rect(fill="gray20"),
       legend.position = "right"
       #legend.title=element_blank()
-    )
+    ) + 
+    base_theme
   
   plot$labels$fill = "NPV"
   plot
@@ -647,11 +756,11 @@ salvar_plots_result = function(results, cenario_plot_players, estrategia_candida
   
   
   # Salvando os Gráficos
-  mapply(ggsave, file=paste0("./images/",nome_resultado,"-estrat",estrategia_candidata,"-",names(plots_linha_geral), ".png"), plot=plots_linha_geral, width = plots_width, height = plots_heigh)
+  mapply(ggsave, file=paste0("./images/",nome_resultado,"-estrat",estrategia_candidata,"-",names(plots_linha_geral), ".eps"), plot=plots_linha_geral, width = plots_width, height = plots_heigh)
   
-  mapply(ggsave, file=paste0("./images/",nome_resultado,"-", names(plots_whisker), ".png"), plot=plots_whisker, width = plots_width, height = plots_heigh)
+  mapply(ggsave, file=paste0("./images/",nome_resultado,"-", names(plots_whisker), ".eps"), plot=plots_whisker, width = plots_width, height = plots_heigh)
   
-  mapply(ggsave, file=paste0("./images/",nome_resultado,"-cenario",cenario_plot_players,"-", names(plots_players), ".png"), plot=plots_players, width = plots_width, height = plots_heigh)
+  mapply(ggsave, file=paste0("./images/",nome_resultado,"-cenario",cenario_plot_players,"-", names(plots_players), ".eps"), plot=plots_players, width = plots_width, height = plots_heigh)
   
   # Retornar objeto com todos os plots:
   list(
@@ -697,5 +806,6 @@ gerar_grafico_curva_experiencia = function() {
     geom_line(aes(y = Learning0.5, colour = "0.5")) + 
     ylab("Custo Variável de Produção") + 
     xlab("Produção Acumulada") +
-    labs(color = expression(Gamma))
+    labs(color = expression(Gamma)) + 
+    base_theme
 }

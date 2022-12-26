@@ -1,9 +1,57 @@
 
+# Source functions again:
+opcoes = list(
+  VarResposta = "sNPVProfit1",
+  VarCenarios = "Scenario",
+  VarEstrategias = "Lever",
+  N = 30,
+  VarTempo = "time",
+  VarCriterio = "RegretPercentil75",
+  SentidoCriterio = "min",
+  Paralelo = TRUE,
+  ModoParalelo = "PSOCK", # PSOCK - Windows e Linux. FORK - Apenas UNIX
+  SimularApenasCasoBase = TRUE,
+  FullFactorialDesign = TRUE,
+  FiltrarCasosPlausiveis = TRUE
+)
 
+START<-2018; FINISH <-2028; STEP<-0.0625; SIM_TIME <- seq(START, FINISH, by=STEP)
+invisible(sapply(X = paste0(list.files(path = "./R/functions/", pattern = "*.R",full.names = T)),FUN = source, echo = F)) 
+N_PLAYERS <- 4;
 
-# Aplicando o Filtro de plausibilidade (Nenhum resultado caiu no filtro)
+# Parâmetros para a Geração dos Gráficos
+plots_width = 9
+plots_heigh = 3.5
+
+USAR_DADOS_SALVOS = FALSE
+SIMULAR_HISTORICO_DIFERENTE = FALSE
+
+load("./outputs/results_final_original.rda")
 
 #### 4.3 Análise dos Resultados ####
+
+
+# Fig 1:
+# Global Demand Dynamics for One Strategy:
+
+selected_strategy = 31
+library(ggfan)
+
+
+set.seed(1234)
+fig1 = plot_fan(dados = results$DadosSimulados, variavel = "aIndustryShipments", nome_amigavel_variavel = "3D Printer Sales", estrategia = selected_strategy)
+
+fig1
+
+ggsave("./figures/fig1.svg", width = 9,height = 5,bg = "white")
+
+
+
+
+
+
+
+
 
 # Escolher Estratégia Candidata de acordo com a definição de Critério:
 results$EstrategiaCandidata = escolher_estrategia_candidata(dados = results$AnaliseRegret$Dados, resumo_estrategias = results$AnaliseRegret$ResumoEstrategias, var_resposta = opcoes$VarResposta, var_criterio = opcoes$VarCriterio, sentido = opcoes$SentidoCriterio)
