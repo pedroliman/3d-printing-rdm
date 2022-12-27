@@ -213,7 +213,7 @@ plot_fan = function(dados, variavel, nome_amigavel_variavel, estrategia) {
   # 
   p + 
     geom_fan(intervals = seq.default(from = 0, to = 1, by = 0.02)) + 
-    stat_sample(aes(group=Scenario), n_samples=5, size=0.3, alpha=0.9,color = "black") +
+    stat_sample(aes(group=Scenario), n_samples=10, size=0.3, alpha=0.9,color = "black") +
     ylab(nome_amigavel_variavel) + 
     base_theme + 
     xlab("Year") + 

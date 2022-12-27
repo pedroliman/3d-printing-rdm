@@ -26,26 +26,33 @@ plots_heigh = 3.5
 USAR_DADOS_SALVOS = FALSE
 SIMULAR_HISTORICO_DIFERENTE = FALSE
 
-load("./outputs/results_final_original.rda")
+load("./outputs/results_final.rda")
 
 #### 4.3 Análise dos Resultados ####
 
+# select candidate strategy for analysis
+results$EstrategiaCandidata = escolher_estrategia_candidata(dados = results$AnaliseRegret$Dados, resumo_estrategias = results$AnaliseRegret$ResumoEstrategias, var_resposta = opcoes$VarResposta, var_criterio = opcoes$VarCriterio, sentido = opcoes$SentidoCriterio)
 
-# Fig 1:
-# Global Demand Dynamics for One Strategy:
-
-selected_strategy = 31
-library(ggfan)
+# candidate strategy:
+results$EstrategiaCandidata
 
 
-set.seed(1234)
-fig1 = plot_fan(dados = results$DadosSimulados, variavel = "aIndustryShipments", nome_amigavel_variavel = "3D Printer Sales", estrategia = selected_strategy)
+set.seed(123)
+fig1 = plot_fan(dados = results$DadosSimulados, variavel = "aIndustryShipments", nome_amigavel_variavel = "3D Printer Sales", estrategia = 31)
 
 fig1
 
 ggsave("./figures/fig1.svg", width = 9,height = 5,bg = "white")
 
 
+# Fig 2: Regret 
+
+# Only show aggressive strategies in this figure.
+# Maybe Show % Open R&D as color
+
+grafico_whisker_por_lever(results$AnaliseRegret$Dados, variavel = "sNPVProfit1Regret", nome_amigavel_variavel = "Regret")
+
+View(results$AnaliseRegret$Dados)
 
 
 
@@ -53,8 +60,10 @@ ggsave("./figures/fig1.svg", width = 9,height = 5,bg = "white")
 
 
 
-# Escolher Estratégia Candidata de acordo com a definição de Critério:
-results$EstrategiaCandidata = escolher_estrategia_candidata(dados = results$AnaliseRegret$Dados, resumo_estrategias = results$AnaliseRegret$ResumoEstrategias, var_resposta = opcoes$VarResposta, var_criterio = opcoes$VarCriterio, sentido = opcoes$SentidoCriterio)
+
+
+
+
 
 
 # Gerar Gráficos para Analisar os Resultados:
@@ -81,11 +90,11 @@ grafico_whisker_por_lever(results$AnaliseRegret$Dados, variavel = "aPerformance1
 
 # Observando Resultados
 
-plots_results$plots_whisker$plot_whisker_lever_regret
-
-plots_results$plots_whisker$plot_whisker_lever_profit
-
-plots_results$plots_whisker$plot_whisker_lever_share
+# plots_results$plots_whisker$plot_whisker_lever_regret
+# 
+# plots_results$plots_whisker$plot_whisker_lever_profit
+# 
+# plots_results$plots_whisker$plot_whisker_lever_share
 
 
 #### Gerando Ranking de Estratégias ####
