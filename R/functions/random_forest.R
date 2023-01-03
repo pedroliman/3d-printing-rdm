@@ -6,11 +6,16 @@ library(ggplot2)
 
 # make test data ----------------------------------------------------------
 
-test_data = data.frame(a = rnorm(n = 1000, mean = 10, sd = 9), 
-                       b = rnorm(n = 1000, mean = 20, sd = 4),
-                       c = rnorm(n = 1000, mean = 2, sd = 3)) %>%
+test_data = data.frame(a = rnorm(n = 2000, mean = 10, sd = 9), 
+                       b = rnorm(n = 2000, mean = 20, sd = 4),
+                       c = rnorm(n = 2000, mean = 2, sd = 3)) %>%
             mutate(y = a + b^3 * c) %>%
-            mutate(y_high = as.factor(y > quantile(y, probs = 0.95))) %>%
+            mutate(y_cat = case_when(
+              y > quantile(y, probs = 0.75) ~ "Upper 25%",
+              y < quantile(y, probs = 0.25) ~ "Lower 25%",
+              TRUE ~ "Middle 50%"
+            )) %>%
+            mutate(y_cat = factor(x = y_cat, levels = c("Lower 25%", "Middle 50%", "Upper 25%"))) %>%
             select(-y)
       
 
@@ -18,7 +23,7 @@ left_hand_side_vars <- c("a","b","c")
 
 # train random forest -----------------------------------------------------
 
-rf <- randomForest::randomForest(y_high ~ ., data = test_data)
+rf <- randomForest::randomForest(y_cat ~ ., data = test_data)
                 
 # Use importance to rank important variables
 
@@ -28,9 +33,9 @@ vars_by_importance <- rownames(rf_importance)[order(rf_importance, decreasing = 
 
 # run predictions for the two-most important variables ------------------------
 
-mins <- sapply(test_data %>% select(-y_high), min) 
-maxs <- sapply(test_data %>% select(-y_high), max)
-means <- sapply(test_data %>% select(-y_high), mean)
+mins <- sapply(test_data %>% select(-y_cat), min) 
+maxs <- sapply(test_data %>% select(-y_cat), max)
+means <- sapply(test_data %>% select(-y_cat), mean)
 
 # make a grid for the two-most important variables:
 
@@ -57,8 +62,8 @@ df_prediction[,"y_pred"] <- predict(rf, newdata = df_prediction)
 # plot
 
 ggplot() + 
-  geom_tile(data = df_prediction, mapping = aes(x = c, y = b, fill = y_pred), alpha = 0.1) + 
-  geom_point(data = test_data, shape=21, mapping = aes(x = c, y = b, fill = y_high), color = "white") + 
+  geom_tile(data = df_prediction, mapping = aes_string(x = variables[1], y = variables[2], fill = "y_pred"), alpha = 0.6) + 
+  geom_point(data = test_data, shape=21, mapping = aes_string(x = variables[1], y = variables[2], fill = "y_cat"), color = "white") + 
   randplot::theme_rand()
 
 
