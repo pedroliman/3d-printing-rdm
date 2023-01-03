@@ -370,6 +370,7 @@ grafico_whisker_por_lever = function(dados_regret, variavel, nome_amigavel_varia
   p + geom_boxplot() + 
     scale_y_continuous(labels = format_for_humans) + 
     ylab(nome_amigavel_variavel) + 
+    xlab("Strategy") + 
     theme(axis.text.x = element_text(size=7)) + 
     base_theme
 }

@@ -26,7 +26,7 @@ plots_heigh = 3.5
 USAR_DADOS_SALVOS = FALSE
 SIMULAR_HISTORICO_DIFERENTE = FALSE
 
-load("./outputs/results_final.rda")
+load("./outputs/results_final_200_lsoda.rda")
 
 #### 4.3 Análise dos Resultados ####
 
@@ -36,8 +36,8 @@ results$EstrategiaCandidata = escolher_estrategia_candidata(dados = results$Anal
 # candidate strategy:
 results$EstrategiaCandidata
 
-
 set.seed(123)
+
 fig1 = plot_fan(dados = results$DadosSimulados, variavel = "aIndustryShipments", nome_amigavel_variavel = "3D Printer Sales", estrategia = 31)
 
 fig1
@@ -50,7 +50,9 @@ ggsave("./figures/fig1.svg", width = 9,height = 5,bg = "white")
 # Only show aggressive strategies in this figure.
 # Maybe Show % Open R&D as color
 
-grafico_whisker_por_lever(results$AnaliseRegret$Dados, variavel = "sNPVProfit1Regret", nome_amigavel_variavel = "Regret")
+fig2 = grafico_whisker_por_lever(results$AnaliseRegret$Dados, variavel = "sNPVProfit1Regret", nome_amigavel_variavel = "NPV Regret")
+
+ggsave("./figures/fig2.svg", width = 9,height = 5,bg = "white")
 
 View(results$AnaliseRegret$Dados)
 
