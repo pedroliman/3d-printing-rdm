@@ -16,7 +16,7 @@ Open the `3d-printing-rdm.Rproj` project with RStudio and run the `01_tables_plo
 ### Folder structure
 
 - **./R/functions**: contains the functions and classes used in the analysis.
-- **./R/scripts**: contains the functions and classes used in the analysis.
+- **./R/scripts**: contains scripts to perform analysis. Scripts can be ran independently, in order.
 - **./inputs**: contains all analysis inputs.
 - **./outputs**: houses intermediate outputs created by the scripts.
 
