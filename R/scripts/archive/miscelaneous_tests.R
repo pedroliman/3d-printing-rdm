@@ -1,67 +1,140 @@
 
+# These scripts are sections created for testing.
+# These analysis were not included in the main paper.
 
-# Selective Openness Code Repository --------------------------------------
-# Code Repository for the "Selective Openness" paper
-# Copyright (C) 2022 by Pedro Nascimento de Lima
-# 
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# Threshold Analysis with a Random Forest ---------------------------------
 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-# 
-# Read the README.md file for usage instructions.
-# -------------------------------------------------------------------------
+library(dplyr)
+library(randomForest)
+library(ggplot2)
+
+# Strategy 21 is an open source strategy.
+# regrets are higher when market is larger and patents are more important for performance.
+
+df_vulnerabilidade = obter_df_vulnerabilidade(results = results, 
+                                              estrategia_candidata = 21, 
+                                              variavel_resposta = "sNPVProfit1Regret" , 
+                                              threshold = 0, 
+                                              planilha_inputs = "./inputs/params_calibracao_opcao1.xlsx") 
+# Average R&D budget
 
 
-# Source functions again:
-opcoes = list(
-  VarResposta = "sNPVProfit1",
-  VarCenarios = "Scenario",
-  VarEstrategias = "Lever",
-  N = 30,
-  VarTempo = "time",
-  VarCriterio = "RegretPercentil75",
-  SentidoCriterio = "min",
-  Paralelo = TRUE,
-  ModoParalelo = "PSOCK", # PSOCK - Windows e Linux. FORK - Apenas UNIX
-  SimularApenasCasoBase = TRUE,
-  FullFactorialDesign = TRUE,
-  FiltrarCasosPlausiveis = TRUE
-)
 
-START<-2018; FINISH <-2028; STEP<-0.0625; SIM_TIME <- seq(START, FINISH, by=STEP)
-invisible(sapply(X = paste0(list.files(path = "./R/functions/", pattern = "*.R",full.names = T)),FUN = source, echo = F)) 
-N_PLAYERS <- 4;
+uncertain_params <- readxl::read_xlsx("./inputs/params_calibracao_opcao1.xlsx", sheet = "params") %>%
+  filter(Tipo == "Incerto") %>%
+  .$Variavel
 
-# Parâmetros para a Geração dos Gráficos
-plots_width = 9
-plots_heigh = 3.5
+class_data <- df_vulnerabilidade %>%
+  dplyr::select(all_of(c("sNPVProfit1Regret", uncertain_params))) %>%
+  mutate(y_cat = case_when(
+    sNPVProfit1Regret <= quantile(sNPVProfit1Regret, probs = 0.25) ~ "Yes",
+    TRUE ~ "No"
+  )) %>%
+  mutate(y_cat = factor(x = y_cat, levels = c("Yes", "No"))) %>%
+  dplyr::select(-sNPVProfit1Regret) %>%
+  mutate(AvgRDinv = (aOrcamentoPeD2 + aOrcamentoPeD3 + aOrcamentoPeD4)/3) %>%
+  mutate(AvgOpenRD = (aPercPeDAberto2 + aPercPeDAberto3 + aPercPeDAberto4)/3) %>%
+  mutate(RivalsDesiredMarketShare = aDesiredMarketShare2 + aDesiredMarketShare3 + aDesiredMarketShare3) %>%
+  mutate(Player2Aggressive = round(aSwitchForCapacityStrategy2) == 1) %>%
+  mutate(Player3Aggressive = round(aSwitchForCapacityStrategy3) == 1) %>%
+  mutate(Player4Aggressive = round(aSwitchForCapacityStrategy4) == 1) %>%
+  mutate(AggressivePlayers =  Player2Aggressive + Player3Aggressive + Player4Aggressive) %>%
+  dplyr::select(-c(aOrcamentoPeD2, aOrcamentoPeD3, aOrcamentoPeD4, aPercPeDAberto2, aPercPeDAberto3, aPercPeDAberto4, aDesiredMarketShare2, aDesiredMarketShare3, aDesiredMarketShare4, Player2Aggressive, Player3Aggressive, Player4Aggressive, aSwitchForCapacityStrategy2, aSwitchForCapacityStrategy3, aSwitchForCapacityStrategy4))
 
-USAR_DADOS_SALVOS = FALSE
-SIMULAR_HISTORICO_DIFERENTE = FALSE
 
-load("./outputs/results_final_200_lsoda.rda")
+left_hand_side_vars <- uncertain_params
+
+# Train a decision tree
+
+# For decision tree model
+library(rpart)
+# For data visualization
+library(rpart.plot)
+
+
+dtree <- rpart::rpart(y_cat ~., data = class_data)
+
+dtree
+
+rpart.plot(dtree, cex = 0.5)
+
+prp(dtree)
+
+
+
+# Random Forest Scenario Discovery ----------------------------------------
+
+
+# train random forest -----------------------------------------------------
+
+
+rf <- randomForest::randomForest(y_cat ~ ., data = rf_data_19)
+
+# Use importance to rank important variables
+
+rf_importance <- importance(rf)
+
+vars_by_importance <- rownames(rf_importance)[order(rf_importance, decreasing = T)]
+
+# run predictions for the two-most important variables ------------------------
+
+mins <- sapply(rf_data_19 %>% dplyr::select(-y_cat), min) 
+maxs <- sapply(rf_data_19 %>% dplyr::select(-y_cat), max)
+means <- sapply(rf_data_19 %>% dplyr::select(-y_cat), mean)
+
+# make a grid for the two-most important variables:
+
+variables <- c(vars_by_importance[1], vars_by_importance[2])
+
+variables_not_included <- left_hand_side_vars[!left_hand_side_vars %in% variables] 
+
+x1 <- seq.default(from = mins[variables[1]], to = maxs[variables[1]], length.out = 50)
+x2 <- seq.default(from = mins[variables[2]], to = maxs[variables[2]], length.out = 50)
+
+df_prediction <- tidyr::expand_grid(x1, x2)
+
+names(df_prediction) <- variables
+
+# Assign mean of variables not included:
+
+for (v in variables_not_included) {
+  df_prediction[,v] <- means[v]
+}
+
+# predict y:
+df_prediction[,"y_pred"] <- predict(rf, newdata = df_prediction)
+
+# plot
+
+ggplot() + 
+  geom_tile(data = df_prediction, mapping = aes_string(x = variables[1], y = variables[2], fill = "y_pred"), alpha = 0.6) + 
+  #geom_point(data = rf_data_19, shape=21, mapping = aes_string(x = variables[1], y = variables[2], fill = "y_cat"), color = "white") + 
+  randplot::theme_rand()
+
+# Using a Random Forest to Determine Conditions under which 
+# NPV profit regret is high:
+results$AnaliseRegret$Dados
+
+
+# Fan plot ----------------------------------------------------------------
+
+# not published
 
 #### 4.3 Análise dos Resultados ####
 
 # select candidate strategy for analysis
-results$EstrategiaCandidata = escolher_estrategia_candidata(dados = results$AnaliseRegret$Dados, resumo_estrategias = results$AnaliseRegret$ResumoEstrategias, var_resposta = opcoes$VarResposta, var_criterio = opcoes$VarCriterio, sentido = opcoes$SentidoCriterio)
+#results$EstrategiaCandidata = escolher_estrategia_candidata(dados = results$AnaliseRegret$Dados, resumo_estrategias = results$AnaliseRegret$ResumoEstrategias, var_resposta = opcoes$VarResposta, var_criterio = opcoes$VarCriterio, sentido = opcoes$SentidoCriterio)
 
 # candidate strategy:
-results$EstrategiaCandidata
+# results$EstrategiaCandidata
 
-set.seed(123)
+#set.seed(123)
 
-fig1 = plot_fan(dados = results$DadosSimulados, variavel = "aIndustryShipments", nome_amigavel_variavel = "3D Printer Sales", estrategia = 31)
+# fig1 = plot_fan(dados = results$DadosSimulados, variavel = "aIndustryShipments", nome_amigavel_variavel = "3D Printer Sales", estrategia = 31)
 
-fig1
+# fig1
 
-ggsave("./figures/fig1.svg", width = 9,height = 5,bg = "white")
+#ggsave("./figures/fig1.svg", width = 9,height = 5,bg = "white")
 
 
 # Fig 2: Regret 
@@ -69,23 +142,8 @@ ggsave("./figures/fig1.svg", width = 9,height = 5,bg = "white")
 # Only show aggressive strategies in this figure.
 # Maybe Show % Open R&D as color
 
-fig2 = grafico_whisker_por_lever(results$AnaliseRegret$Dados, variavel = "sNPVProfit1Regret", nome_amigavel_variavel = "NPV Regret")
 
-ggsave("./figures/fig2.svg", width = 9,height = 5,bg = "white")
-
-View(results$AnaliseRegret$Dados)
-
-
-
-
-
-
-
-
-
-
-
-
+# Other Plots -------------------------------------------------------------
 
 # Gerar Gráficos para Analisar os Resultados:
 
@@ -118,6 +176,9 @@ grafico_whisker_por_lever(results$AnaliseRegret$Dados, variavel = "aPerformance1
 # plots_results$plots_whisker$plot_whisker_lever_share
 
 
+
+
+
 #### Gerando Ranking de Estratégias ####
 
 ranking_estrategias = results$AnaliseRegret$ResumoEstrategias[,c("Lever", "sNPVProfit1RegretPercPercentil75", "sNPVProfit1RegretPercentil75")]
@@ -130,7 +191,7 @@ ranking_estrategias_formatado = ranking_estrategias
 
 ranking_estrategias_formatado$sNPVProfit1RegretPercentil75 = format_for_humans(ranking_estrategias_formatado$sNPVProfit1RegretPercentil75)
 
-View(ranking_estrategias)
+View(ranking_estrategias_formatado)
 
 list_tabelas_output[["RankingEstrategias"]] <- ranking_estrategias
 
@@ -1267,4 +1328,5 @@ names(um_cenario_com_estrategia)
 c("Time", "Player 1 Profit", "Player 2 Profit", "Player 3 Profit", "Player 4 Profit")
 
 write.csv(um_cenario_com_estrategia, file = "analise_multi_objetivo.csv", row.names = F)
+
 

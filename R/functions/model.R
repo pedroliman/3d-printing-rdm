@@ -537,7 +537,8 @@ modelo <- function(time, stocks, auxs, modo = "completo"){
     
     # Definindo Estratégia no Cenário Base
     
-    
+    # 1 = aggressive
+    # 2 = conservative
     
     aSwitchForCapacityStrategy1 = ifelse(aSwitchForCapacityStrategy == 1, 1, 0)
     aSwitchForCapacityStrategy2 = ifelse(aSwitchForCapacityStrategy == 2, 1, 0)

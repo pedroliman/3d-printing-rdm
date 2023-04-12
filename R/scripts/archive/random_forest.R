@@ -24,7 +24,7 @@ left_hand_side_vars <- c("a","b","c")
 # train random forest -----------------------------------------------------
 
 rf <- randomForest::randomForest(y_cat ~ ., data = test_data)
-                
+
 # Use importance to rank important variables
 
 rf_importance <- importance(rf)
@@ -68,9 +68,4 @@ ggplot() +
 
 
 # Fit random forest -------------------------------------------------------
-
-
-
-# 2x2 decision boundaries -------------------------------------------------
-
 
